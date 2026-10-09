@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D'Luck Project Controller</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d1117">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0d1117; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+
+        /* LOADING SCREEN */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #090c10; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 999;
+            transition: opacity 0.5s ease;
+        }
+        .loader-logo {
+            font-size: 32px; font-weight: bold; background: linear-gradient(45deg, #00f3ff, #ff007f);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 243, 255, 0.5); margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #00f3ff; border-radius: 50%;
+            animation: spin 1s linear infinite; box-shadow: 0 0 15px #00f3ff;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* MAIN APP CONTAINER */
+        #app-container {
+            width: 100%; max-width: 400px; height: 100%; max-height: 800px;
+            background: #161b22; display: flex; flex-direction: column;
+            border-radius: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border: 1px solid #30363d; overflow: hidden; display: none;
+        }
+        header {
+            padding: 20px; text-align: center; background: #21262d;
+            border-bottom: 1px solid #30363d;
+        }
+        header h1 {
+            font-size: 20px; background: linear-gradient(45deg, #00f3ff, #ff007f);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .content { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        .card {
+            background: #21262d; padding: 15px; border-radius: 12px;
+            border: 1px solid #30363d; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .card h3 { font-size: 14px; margin-bottom: 10px; color: #8b949e; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button {
+            padding: 12px; border: none; border-radius: 8px; font-weight: bold;
+            cursor: pointer; transition: 0.2s; color: #fff;
+        }
+        .btn-cyan { background: linear-gradient(135deg, #00f3ff, #0077ff); box-shadow: 0 0 10px rgba(0,243,255,0.3); }
+        .btn-pink { background: linear-gradient(135deg, #ff007f, #7f00ff); box-shadow: 0 0 10px rgba(255,0,127,0.3); }
+        button:active { transform: scale(0.95); }
+
+        .status-box {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; color: #8b949e;
+        }
+        .indicator { width: 10px; height: 10px; background: #ff5555; border-radius: 50%; box-shadow: 0 0 8px #ff5555; }
+        .indicator.connected { background: #55ff55; box-shadow: 0 0 8px #55ff55; }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div id="loading-screen">
+        <div class="loader-logo">D'LUCK PROJECT</div>
+        <div class="spinner"></div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app-container">
+        <header>
+            <h1>D'LUCK CONTROLLER</h1>
+        </header>
+        <div class="content">
+            <div class="card">
+                <h3>KONEKSI ESP32-C3</h3>
+                <div class="status-box" style="margin-bottom: 10px;">
+                    <span>Status: <strong id="conn-status" style="color:#ff5555;">Terputus</strong></span>
+                    <div id="indicator" class="indicator"></div>
+                </div>
+                <button class="btn-cyan" style="width: 100%;" onclick="toggleConnect()">Hubungkan Perangkat</button>
+            </div>
+
+            <div class="card">
+                <h3>KONTROL UTAMA</h3>
+                <div class="btn-grid">
+                    <button class="btn-cyan" onclick="sendCommand('ON')">NYALAKAN</button>
+                    <button class="btn-pink" onclick="sendCommand('OFF')">MATIKAN</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>MODE ANIMASI / RUNNING</h3>
+                <div class="btn-grid">
+                    <button class="btn-cyan" onclick="sendCommand('MODE_1')">Mode Alis 1</button>
+                    <button class="btn-pink" onclick="sendCommand('MODE_2')">Mode Alis 2</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulasi Loading Screen selama 2 detik lalu masuk ke App
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    document.getElementById('app-container').style.display = 'flex';
+                }, 500);
+            }, 2000);
+        });
+
+        // Logika Tombol Kontrol (Hubungkan ke ESP32 via WebSocket / HTTP / Bluetooth)
+        function toggleConnect() {
+            const statusEl = document.getElementById('conn-status');
+            const indicatorEl = document.getElementById('indicator');
+            
+            // Contoh simulasi koneksi berhasil
+            statusEl.innerText = "Terhubung";
+            statusEl.style.color = "#55ff55";
+            indicatorEl.classList.add('connected');
+            alert("Berhasil terhubung ke ESP32-C3!");
+        }
+
+        function sendCommand(cmd) {
+            console.log("Mengirim perintah ke ESP32-C3:", cmd);
+            // Tambahkan fetch API ke IP ESP32 Anda di sini, contoh: fetch('/control?cmd=' + cmd)
+        }
+
+        // Registrasi Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
